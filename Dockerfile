@@ -1,12 +1,12 @@
-# Node.js Base Image - LTS Version für Stabilität
-FROM node:18-alpine
+# Multi-stage build für optimale Performance
+FROM node:18-alpine AS builder
 
 # Metadata
 LABEL maintainer="Russkaya Familie"
-LABEL description="Discord Bot für GTA V Grand RP - Pflanzen & Solar Management"
-LABEL version="2.0"
+LABEL description="Discord Bot v2.0 für GTA V Grand RP - Production Ready mit PostgreSQL"
+LABEL version="2.0.0"
 
-# System dependencies für Charts und SQLite
+# System dependencies für Charts und Native Modules
 RUN apk add --no-cache \
     python3 \
     make \
@@ -16,40 +16,57 @@ RUN apk add --no-cache \
     pango-dev \
     giflib-dev \
     pixman-dev \
-    sqlite
+    postgresql-client
 
 # Arbeitsverzeichnis erstellen
 WORKDIR /app
 
-# Package files zuerst kopieren für besseres Caching
+# Package files kopieren für besseres Caching
 COPY package*.json ./
 
-# Dependencies installieren
+# Dependencies installieren (nur Production)
 RUN npm ci --only=production && \
     npm cache clean --force
 
-# Bot Code kopieren
-COPY . .
+# Production Stage
+FROM node:18-alpine AS production
 
-# Benutzer für Sicherheit erstellen
-RUN addgroup -g 1001 -S botuser && \
-    adduser -S discordbot -u 1001 -G botuser
+# System runtime dependencies
+RUN apk add --no-cache \
+    cairo \
+    jpeg \
+    pango \
+    giflib \
+    pixman \
+    postgresql-client \
+    curl
 
-# Datenbank Ordner erstellen und Permissions setzen
-RUN mkdir -p /app/data && \
-    chown -R discordbot:botuser /app
+# Arbeitsverzeichnis
+WORKDIR /app
 
-# Als non-root User wechseln
-USER discordbot
+# Non-root user erstellen
+RUN addgroup -g 1001 -S botgroup && \
+    adduser -S botuser -u 1001 -G botgroup
 
-# Port für Health Checks exponieren
+# Dependencies und Code kopieren
+COPY --from=builder --chown=botuser:botgroup /app/node_modules ./node_modules
+COPY --chown=botuser:botgroup . .
+
+# Berechtigungen setzen
+RUN chown -R botuser:botgroup /app && \
+    chmod +x /app/scripts/*.js || true
+
+# Als non-root user wechseln
+USER botuser
+
+# Port für Health Checks
 EXPOSE 3000
 
-# Healthcheck hinzufügen
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
+# Health Check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
 
-# Graceful shutdown support
+# Graceful shutdown signal
 STOPSIGNAL SIGTERM
 
 # Bot starten
