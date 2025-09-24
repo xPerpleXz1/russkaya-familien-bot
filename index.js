@@ -249,7 +249,7 @@ client.once('ready', async () => {
     startHealthCheckServer();
 });
 
-// Command Registration – SOFORT für deinen Server aus der .env-Variable
+// ===== COMMAND REGISTRATION =====
 async function registerCommands() {
     const commands = [
         // Pflanzen Commands
@@ -260,6 +260,7 @@ async function registerCommands() {
                 option.setName('location')
                     .setDescription('Wo wurde die Pflanze gesät?')
                     .setRequired(true)),
+
         new SlashCommandBuilder()
             .setName('pflanze-düngen')
             .setDescription('💚 Eine Pflanze düngen (+25% Ertrag)')
@@ -267,6 +268,7 @@ async function registerCommands() {
                 option.setName('id')
                     .setDescription('ID der Pflanze')
                     .setRequired(true)),
+
         new SlashCommandBuilder()
             .setName('pflanze-ernten')
             .setDescription('🌿 Eine Pflanze ernten')
@@ -278,6 +280,7 @@ async function registerCommands() {
                 option.setName('car')
                     .setDescription('In welches Auto/Lager?')
                     .setRequired(true)),
+
         new SlashCommandBuilder()
             .setName('pflanzen-status')
             .setDescription('📋 Alle aktiven Pflanzen anzeigen'),
@@ -290,6 +293,7 @@ async function registerCommands() {
                 option.setName('location')
                     .setDescription('Wo wurde das Panel aufgestellt?')
                     .setRequired(true)),
+
         new SlashCommandBuilder()
             .setName('solar-reparieren')
             .setDescription('🔧 Ein Solarpanel reparieren')
@@ -297,6 +301,7 @@ async function registerCommands() {
                 option.setName('id')
                     .setDescription('ID des Solarpanels')
                     .setRequired(true)),
+
         new SlashCommandBuilder()
             .setName('solar-sammeln')
             .setDescription('🔋 Batterie von Solarpanel sammeln')
@@ -308,11 +313,12 @@ async function registerCommands() {
                 option.setName('car')
                     .setDescription('In welches Auto/Lager?')
                     .setRequired(true)),
+
         new SlashCommandBuilder()
             .setName('solar-status')
             .setDescription('📋 Alle aktiven Solarpanels anzeigen'),
 
-        // Admin & Utility
+        // Admin & Utility Commands
         new SlashCommandBuilder()
             .setName('backup')
             .setDescription('💾 Daten-Backup erstellen (Admin only)')
@@ -324,34 +330,85 @@ async function registerCommands() {
                         { name: 'CSV (Standard)', value: 'csv' },
                         { name: 'JSON (Auszahlungen)', value: 'json' }
                     )),
+
         new SlashCommandBuilder()
             .setName('help')
             .setDescription('❓ Hilfe und Befehls-Übersicht'),
+
         new SlashCommandBuilder()
             .setName('statistiken')
             .setDescription('📊 Server-Statistiken anzeigen')
-    ].map(cmd => cmd.toJSON());
+    ];
 
     try {
         console.log('📝 Registriere Slash Commands...');
-        const GUILD_ID = process.env.DISCORD_GUILD_ID;
-        if (!GUILD_ID) {
-            throw new Error('Keine GUILD_ID in der .env-Datei gefunden!');
-        }
-        // Discord.js v14: guilds.fetch statt cache.get, damit es sicher klappt!
-        const guild = await client.guilds.fetch(GUILD_ID);
-
-        if (guild) {
-            await guild.commands.set(commands);
-            console.log(`✅ Slash Commands SOFORT für "${guild.name}" registriert!`);
-        } else {
-            await client.application.commands.set(commands);
-            console.log('⚠️ Commands global registriert (dauert bis zu 1 Stunde!)');
-        }
+        await client.application.commands.set(commands);
+        console.log(`✅ ${commands.length} Commands erfolgreich registriert!`);
     } catch (error) {
         console.error('❌ Fehler beim Registrieren der Commands:', error);
     }
 }
+
+// ===== COMMAND HANDLERS =====
+
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    const { commandName } = interaction;
+    const serverId = interaction.guildId;
+
+    try {
+        switch (commandName) {
+            case 'pflanze-säen':
+                await handlePlantSeed(interaction);
+                break;
+            case 'pflanze-düngen':
+                await handlePlantFertilize(interaction);
+                break;
+            case 'pflanze-ernten':
+                await handlePlantHarvest(interaction);
+                break;
+            case 'pflanzen-status':
+                await handlePlantsStatus(interaction);
+                break;
+            case 'solar-aufstellen':
+                await handleSolarPlace(interaction);
+                break;
+            case 'solar-reparieren':
+                await handleSolarRepair(interaction);
+                break;
+            case 'solar-sammeln':
+                await handleSolarCollect(interaction);
+                break;
+            case 'solar-status':
+                await handleSolarStatus(interaction);
+                break;
+            case 'backup':
+                await handleBackup(interaction);
+                break;
+            case 'help':
+                await handleHelp(interaction);
+                break;
+            case 'statistiken':
+                await handleStatistics(interaction);
+                break;
+            default:
+                await interaction.reply({ 
+                    content: '❌ Unbekannter Command!', 
+                    ephemeral: true 
+                });
+        }
+    } catch (error) {
+        console.error(`❌ Command Error (${commandName}):`, error);
+        
+        const errorMessage = 'Es ist ein Fehler aufgetreten! Bitte versuche es erneut.';
+        
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: errorMessage, ephemeral: true });
+        } else if (interaction.deferred) {
+            await interaction.followUp({ content: errorMessage, ephemeral: true });
+        }
+    }
 });
 
 // ===== PFLANZEN COMMANDS =====
