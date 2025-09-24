@@ -4,15 +4,19 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment Variables (WICHTIG!)
+# Environment Variables (KRITISCH!)
 .env
 .env.local
 .env.production
 .env.development
+.env.test
 
 # Logs
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Runtime data
 pids/
@@ -20,7 +24,13 @@ pids/
 *.seed
 *.pid.lock
 
-# Datenbank-Dateien (falls lokal)
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Datenbank-Dateien (lokal)
 *.db
 *.sqlite
 *.sqlite3
@@ -29,11 +39,15 @@ pids/
 tmp/
 temp/
 *.tmp
+*.temp
 
 # OS generated files
 .DS_Store
 .DS_Store?
 ._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # IDE
@@ -41,10 +55,20 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
-# Railway
+# Railway deployment
 .railway/
+
+# Docker
+.dockerignore
 
 # Backup files
 backups/
 *.backup
+*.bak
+
+# Config files with secrets
+config.json
+secrets.json
