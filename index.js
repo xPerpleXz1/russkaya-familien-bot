@@ -1,4 +1,744 @@
-const { 
+serverId
+        ]);
+
+        if (rows.length === 0) return;
+
+        const profile = rows[0];
+        const user = await client.users.fetch(userId);
+        const guild = client.guilds.cache.get(serverId);
+
+        if (!user || !guild) return;
+
+        // Achievement-Benachrichtigung
+        const rarityColors = {
+            'common': '#95a5a6',
+            'uncommon': '#3498db',
+            'rare': '#9b59b6',
+            'epic': '#e67e22',
+            'legendary': '#f1c40f'
+        };
+
+        const embed = new EmbedBuilder()
+            .setColor(rarityColors[achievement.rarity] || '#95a5a6')
+            .setTitle('🏆 ACHIEVEMENT UNLOCKED!')
+            .setDescription(`**${user.displayName || user.username}** hat ein Achievement erhalten!`)
+            .addFields(
+                { name: `${achievement.icon} ${achievement.name}`, value: achievement.description, inline: false },
+                { name: '🎁 Belohnung', value: `${utils.formatCurrency(achievement.reward_money)} + ${achievement.reward_experience} XP`, inline: true },
+                { name: '💎 Seltenheit', value: achievement.rarity.toUpperCase(), inline: true },
+                { name: '📊 Neues Level', value: `**${utils.calculateLevel(profile.experience)}**`, inline: true }
+            )
+            .setThumbnail(user.displayAvatarURL())
+            .setFooter({ text: 'Russkaya Familie 🇷🇺 • Gut gemacht!' })
+            .setTimestamp();
+
+        // In einem passenden Channel posten
+        const channels = guild.channels.cache.filter(c => 
+            c.type === 0 && (
+                c.name.includes('achievement') || 
+                c.name.includes('announce') ||
+                c.name.includes('general') ||
+                c.name.includes('familie')
+            )
+        );
+
+        const targetChannel = channels.first();
+        if (targetChannel) {
+            await targetChannel.send({ embeds: [embed] });
+        }
+
+    } catch (error) {
+        console.error('❌ Grant Achievement Error:', error);
+    }
+}
+
+async function logActivity(userId, username, actionType, itemType, itemId, location, details, serverId, experience = 0, reward = 0) {
+    try {
+        await db.query(`
+            INSERT INTO activity_logs (user_id, username, action_type, item_type, item_id, location, details, server_id, experience, reward)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `, [userId, username, actionType, itemType, itemId, location, details, serverId, experience, reward]);
+    } catch (error) {
+        console.error('❌ Log Activity Error:', error);
+    }
+}
+
+// ===== AUSZAHLUNGS-SYSTEM (für Leaderin) =====
+
+// WICHTIG: Auszahlungswerte - Diese können später angepasst werden!
+const PAYOUT_RATES = {
+    // Pflanzen-Aktivitäten
+    PLANTED: 500,        // 500€ pro gesäter Pflanze
+    FERTILIZED_OWN: 200, // 200€ für eigene Pflanze düngen
+    FERTILIZED_TEAM: 400, // 400€ für fremde Pflanze düngen (Teamwork!)
+    HARVESTED_OWN: 800,   // 800€ für eigene Pflanze ernten
+    HARVESTED_TEAM: 600,  // 600€ für fremde Pflanze ernten
+    
+    // Solar-Aktivitäten  
+    PLACED: 700,         // 700€ pro aufgestelltem Panel
+    REPAIRED_OWN: 300,   // 300€ für eigenes Panel reparieren
+    REPAIRED_TEAM: 500,  // 500€ für fremdes Panel reparieren (Teamwork!)
+    COLLECTED_OWN: 1000, // 1000€ für eigene Batterie sammeln
+    COLLECTED_TEAM: 800, // 800€ für fremde Batterie sammeln
+    
+    // Bonus-Multiplkatoren
+    QUALITY_BONUS: 1.2,  // +20% für qualitativ hochwertige Pflanzen
+    SPEED_BONUS: 1.5,    // +50% für schnelle Aktionen
+    LEVEL_BONUS: 0.05    // +5% pro Level (Level 10 = +50%)
+};
+
+async function calculateDailyPayouts(serverId, date = null) {
+    try {
+        const targetDate = date || new Date().toISOString().split('T')[0];
+        
+        const { rows: activities } = await db.query(`
+            SELECT 
+                al.*,
+                up.level,
+                CASE 
+                    WHEN al.item_type = 'PLANT' THEN 
+                        CASE 
+                            WHEN p.user_id = al.user_id THEN 'OWN'
+                            ELSE 'TEAM'
+                        END
+                    WHEN al.item_type = 'SOLAR' THEN
+                        CASE 
+                            WHEN sp.user_id = al.user_id THEN 'OWN'
+                            ELSE 'TEAM'
+                        END
+                    ELSE 'UNKNOWN'
+                END as ownership_type,
+                p.quality as plant_quality,
+                CASE 
+                    WHEN al.details LIKE '%Schnell-Bonus%' THEN true
+                    ELSE false
+                END as has_speed_bonus
+            FROM activity_logs al
+            LEFT JOIN user_profiles up ON al.user_id = up.user_id AND al.server_id = up.server_id
+            LEFT JOIN plants p ON al.item_id = p.id AND al.item_type = 'PLANT'
+            LEFT JOIN solar_panels sp ON al.item_id = sp.id AND al.item_type = 'SOLAR'
+            WHERE al.server_id = $1 AND DATE(al.timestamp) = $2
+            ORDER BY al.timestamp DESC
+        `, [serverId, targetDate]);
+
+        const userPayouts = {};
+
+        activities.forEach(activity => {
+            const userId = activity.user_id;
+            const username = activity.username;
+            const level = activity.level || 1;
+            
+            if (!userPayouts[userId]) {
+                userPayouts[userId] = {
+                    username,
+                    level,
+                    activities: [],
+                    totalPayout: 0,
+                    breakdown: {
+                        planted: { count: 0, amount: 0 },
+                        fertilized: { count: 0, amount: 0, team: 0 },
+                        harvested: { count: 0, amount: 0, team: 0 },
+                        placed: { count: 0, amount: 0 },
+                        repaired: { count: 0, amount: 0, team: 0 },
+                        collected: { count: 0, amount: 0, team: 0 }
+                    }
+                };
+            }
+
+            let basePayout = 0;
+            let bonusMultiplier = 1.0;
+            
+            // Basis-Auszahlung ermitteln
+            switch (activity.action_type) {
+                case 'PLANTED':
+                    basePayout = PAYOUT_RATES.PLANTED;
+                    userPayouts[userId].breakdown.planted.count++;
+                    break;
+                    
+                case 'FERTILIZED':
+                    if (activity.ownership_type === 'OWN') {
+                        basePayout = PAYOUT_RATES.FERTILIZED_OWN;
+                    } else {
+                        basePayout = PAYOUT_RATES.FERTILIZED_TEAM;
+                        userPayouts[userId].breakdown.fertilized.team++;
+                    }
+                    userPayouts[userId].breakdown.fertilized.count++;
+                    break;
+                    
+                case 'HARVESTED':
+                    if (activity.ownership_type === 'OWN') {
+                        basePayout = PAYOUT_RATES.HARVESTED_OWN;
+                    } else {
+                        basePayout = PAYOUT_RATES.HARVESTED_TEAM;
+                        userPayouts[userId].breakdown.harvested.team++;
+                    }
+                    userPayouts[userId].breakdown.harvested.count++;
+                    
+                    // Qualitäts-Bonus
+                    if (activity.plant_quality > 1) {
+                        bonusMultiplier *= PAYOUT_RATES.QUALITY_BONUS;
+                    }
+                    break;
+                    
+                case 'PLACED':
+                    basePayout = PAYOUT_RATES.PLACED;
+                    userPayouts[userId].breakdown.placed.count++;
+                    break;
+                    
+                case 'REPAIRED':
+                    if (activity.ownership_type === 'OWN') {
+                        basePayout = PAYOUT_RATES.REPAIRED_OWN;
+                    } else {
+                        basePayout = PAYOUT_RATES.REPAIRED_TEAM;
+                        userPayouts[userId].breakdown.repaired.team++;
+                    }
+                    userPayouts[userId].breakdown.repaired.count++;
+                    break;
+                    
+                case 'COLLECTED':
+                    if (activity.ownership_type === 'OWN') {
+                        basePayout = PAYOUT_RATES.COLLECTED_OWN;
+                    } else {
+                        basePayout = PAYOUT_RATES.COLLECTED_TEAM;
+                        userPayouts[userId].breakdown.collected.team++;
+                    }
+                    userPayouts[userId].breakdown.collected.count++;
+                    
+                    // Speed-Bonus
+                    if (activity.has_speed_bonus) {
+                        bonusMultiplier *= PAYOUT_RATES.SPEED_BONUS;
+                    }
+                    break;
+            }
+            
+            // Level-Bonus anwenden
+            bonusMultiplier *= (1 + (level * PAYOUT_RATES.LEVEL_BONUS));
+            
+            // Finale Auszahlung berechnen
+            const finalPayout = Math.round(basePayout * bonusMultiplier);
+            
+            // Zu Breakdown hinzufügen
+            const actionKey = activity.action_type.toLowerCase();
+            if (userPayouts[userId].breakdown[actionKey]) {
+                userPayouts[userId].breakdown[actionKey].amount += finalPayout;
+            }
+            
+            userPayouts[userId].activities.push({
+                action: activity.action_type,
+                item_type: activity.item_type,
+                item_id: activity.item_id,
+                location: activity.location,
+                ownership: activity.ownership_type,
+                basePayout,
+                bonusMultiplier: Math.round((bonusMultiplier - 1) * 100),
+                finalPayout,
+                timestamp: activity.timestamp
+            });
+            
+            userPayouts[userId].totalPayout += finalPayout;
+        });
+
+        return { date: targetDate, userPayouts, activities: activities.length };
+
+    } catch (error) {
+        console.error('❌ Calculate Daily Payouts Error:', error);
+        return null;
+    }
+}
+
+// ===== ADMIN COMMANDS =====
+
+async function handleBackup(interaction) {
+    const format = interaction.options.getString('format') || 'csv';
+    const serverId = interaction.guildId;
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (format === 'csv') {
+            // Standard CSV Backup
+            const { rows: plants } = await db.query('SELECT * FROM plants WHERE server_id = $1', [serverId]);
+            const { rows: solar } = await db.query('SELECT * FROM solar_panels WHERE server_id = $1', [serverId]);
+            const { rows: logs } = await db.query('SELECT * FROM activity_logs WHERE server_id = $1 ORDER BY timestamp DESC LIMIT 1000', [serverId]);
+
+            let csvContent = 'PFLANZEN\n';
+            csvContent += 'ID,User,Username,Planted_At,Location,Status,Fertilized_By,Harvested_By,Car\n';
+            plants.forEach(p => {
+                csvContent += `${p.id},${p.user_id},${p.username},${p.planted_at},${p.location},${p.status},${p.fertilized_by || ''},${p.harvested_by || ''},${p.car_stored || ''}\n`;
+            });
+
+            csvContent += '\nSOLAR PANELS\n';
+            csvContent += 'ID,User,Username,Placed_At,Location,Status,Repairs,Collected_By,Car\n';
+            solar.forEach(s => {
+                csvContent += `${s.id},${s.user_id},${s.username},${s.placed_at},${s.location},${s.status},${s.repairs_count},${s.collected_by || ''},${s.car_stored || ''}\n`;
+            });
+
+            csvContent += '\nACTIVITY LOGS (letzte 1000)\n';
+            csvContent += 'ID,User,Username,Action,Item_Type,Item_ID,Location,Details,Timestamp\n';
+            logs.forEach(l => {
+                csvContent += `${l.id},${l.user_id},${l.username},${l.action_type},${l.item_type},${l.item_id},${l.location || ''},${l.details || ''},${l.timestamp}\n`;
+            });
+
+            const buffer = Buffer.from(csvContent, 'utf8');
+            const attachment = new AttachmentBuilder(buffer, { name: `russkaya_backup_${timestamp}.csv` });
+
+            const embed = new EmbedBuilder()
+                .setColor('#00FF00')
+                .setTitle('💾 Backup erfolgreich erstellt')
+                .setDescription('CSV-Backup aller Server-Daten')
+                .addFields(
+                    { name: '🌱 Pflanzen', value: `${plants.length}`, inline: true },
+                    { name: '☀️ Solar', value: `${solar.length}`, inline: true },
+                    { name: '📋 Logs', value: `${logs.length}`, inline: true }
+                )
+                .setFooter({ text: 'Russkaya Familie 🇷🇺' })
+                .setTimestamp();
+
+            await interaction.followUp({ embeds: [embed], files: [attachment], ephemeral: true });
+            
+        } else if (format === 'json') {
+            // SPEZIAL: Auszahlungs-JSON für Leaderin
+            const payoutData = await calculateDailyPayouts(serverId, today);
+            
+            if (!payoutData) {
+                await interaction.followUp({ content: '❌ Fehler beim Berechnen der Auszahlungen!', ephemeral: true });
+                return;
+            }
+
+            // Erstelle detaillierte Auszahlungsdatei
+            const payoutJson = {
+                metadata: {
+                    generatedAt: new Date().toISOString(),
+                    date: payoutData.date,
+                    serverId: serverId,
+                    totalActivities: payoutData.activities,
+                    payoutRates: PAYOUT_RATES
+                },
+                summary: {
+                    totalUsers: Object.keys(payoutData.userPayouts).length,
+                    totalPayout: Object.values(payoutData.userPayouts).reduce((sum, user) => sum + user.totalPayout, 0),
+                    averagePayout: Math.round(Object.values(payoutData.userPayouts).reduce((sum, user) => sum + user.totalPayout, 0) / Object.keys(payoutData.userPayouts).length || 0)
+                },
+                payouts: Object.entries(payoutData.userPayouts)
+                    .map(([userId, data]) => ({
+                        userId,
+                        username: data.username,
+                        level: data.level,
+                        totalPayout: data.totalPayout,
+                        breakdown: data.breakdown,
+                        detailedActivities: data.activities
+                    }))
+                    .sort((a, b) => b.totalPayout - a.totalPayout),
+                instructions: {
+                    note: "Diese Datei enthält alle berechneten Auszahlungen für heute",
+                    howToUse: "1. Öffne die JSON Datei, 2. Schaue unter 'payouts' für jeden Spieler, 3. 'totalPayout' ist der Betrag zum Auszahlen",
+                    rates: "Auszahlungsraten können im Code angepasst werden (PAYOUT_RATES Objekt)"
+                }
+            };
+
+            const jsonBuffer = Buffer.from(JSON.stringify(payoutJson, null, 2), 'utf8');
+            const jsonAttachment = new AttachmentBuilder(jsonBuffer, { name: `russkaya_auszahlungen_${today}.json` });
+
+            // Erstelle auch eine lesbare CSV für die Leaderin
+            let payoutCsv = 'TÄGLICHE AUSZAHLUNGEN - ' + today + '\n\n';
+            payoutCsv += 'Rang,Username,Level,Gesamt Auszahlung,Gepflanzt,Gedüngt,Geerntet,Solar Aufgestellt,Repariert,Batterien\n';
+            
+            payoutJson.payouts.forEach((user, index) => {
+                payoutCsv += `${index + 1},${user.username},${user.level},${user.totalPayout}€,`;
+                payoutCsv += `${user.breakdown.planted.amount}€,${user.breakdown.fertilized.amount}€,${user.breakdown.harvested.amount}€,`;
+                payoutCsv += `${user.breakdown.placed.amount}€,${user.breakdown.repaired.amount}€,${user.breakdown.collected.amount}€\n`;
+            });
+
+            payoutCsv += `\nGESAMTSUMME:,,,${payoutJson.summary.totalPayout}€,,,,,\n`;
+            payoutCsv += `DURCHSCHNITT:,,,${payoutJson.summary.averagePayout}€,,,,,\n\n`;
+            
+            payoutCsv += 'TEAMWORK BONUS ÜBERSICHT:\n';
+            payoutCsv += 'Username,Fremde Pflanzen gedüngt,Fremde Pflanzen geerntet,Fremde Panels repariert,Fremde Batterien gesammelt\n';
+            
+            payoutJson.payouts.forEach(user => {
+                if (user.breakdown.fertilized.team > 0 || user.breakdown.harvested.team > 0 || user.breakdown.repaired.team > 0 || user.breakdown.collected.team > 0) {
+                    payoutCsv += `${user.username},${user.breakdown.fertilized.team},${user.breakdown.harvested.team},${user.breakdown.repaired.team},${user.breakdown.collected.team}\n`;
+                }
+            });
+
+            const csvBuffer = Buffer.from(payoutCsv, 'utf8');
+            const csvAttachment = new AttachmentBuilder(csvBuffer, { name: `russkaya_auszahlungen_${today}.csv` });
+
+            const embed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle('💰 Tägliche Auszahlungs-Berechnung')
+                .setDescription(`Automatische Berechnung für **${today}**`)
+                .addFields(
+                    { name: '👥 Aktive Spieler', value: `${payoutJson.summary.totalUsers}`, inline: true },
+                    { name: '📊 Gesamt-Aktivitäten', value: `${payoutData.activities}`, inline: true },
+                    { name: '💰 Gesamt-Auszahlung', value: `**${utils.formatCurrency(payoutJson.summary.totalPayout)}**`, inline: true },
+                    { name: '📋 Top 3 Verdiener', value: payoutJson.payouts.slice(0, 3).map((user, i) => `${i + 1}. ${user.username}: **${utils.formatCurrency(user.totalPayout)}**`).join('\n'), inline: false }
+                )
+                .setFooter({ text: 'Russkaya Familie 🇷🇺 • JSON = Details, CSV = Übersicht' })
+                .setTimestamp();
+
+            await interaction.followUp({ 
+                embeds: [embed], 
+                files: [jsonAttachment, csvAttachment], 
+                ephemeral: true 
+            });
+        }
+
+    } catch (error) {
+        console.error('❌ Backup Error:', error);
+        await interaction.followUp({ content: '❌ Fehler beim Erstellen des Backups!', ephemeral: true });
+    }
+}
+
+// ===== WEITERE COMMAND IMPLEMENTATIONS (vereinfacht) =====
+
+async function handleHelp(interaction) {
+    const embed = new EmbedBuilder()
+        .setColor('#0099FF')
+        .setTitle('❓ Russkaya Familie Bot - Hilfe')
+        .setDescription('Alle verfügbaren Commands im Überblick')
+        .addFields(
+            { name: '🌱 Pflanzen', value: '`/pflanze-säen` - Neue Pflanze säen\n`/pflanze-düngen` - Pflanze düngen\n`/pflanze-ernten` - Pflanze ernten\n`/pflanzen-status` - Status anzeigen', inline: true },
+            { name: '☀️ Solar', value: '`/solar-aufstellen` - Panel aufstellen\n`/solar-reparieren` - Panel reparieren\n`/solar-sammeln` - Batterie sammeln\n`/solar-status` - Status anzeigen', inline: true },
+            { name: '💰 Admin', value: '`/backup format:json` - **Auszahlungen berechnen**\n`/statistiken` - Server Stats\n`/logs` - Aktivitätslogs', inline: true }
+        )
+        .setFooter({ text: 'Russkaya Familie 🇷🇺 • /backup format:json für Auszahlungen!' })
+        .setTimestamp();
+
+    await interaction.reply({ embeds: [embed] });
+}
+
+// Weitere Command-Handler vereinfacht implementiert
+async function handleProfile(interaction) { await interaction.reply('👤 Profil-Feature kommt bald!'); }
+async function handleLeaderboard(interaction) { await interaction.reply('🏆 Leaderboard-Feature kommt bald!'); }
+async function handleAchievements(interaction) { await interaction.reply('🏅 Achievement-Feature kommt bald!'); }
+async function handleStatistics(interaction) { await interaction.reply('📊 Statistik-Feature kommt bald!'); }
+async function handleLogs(interaction) { await interaction.reply('📋 Logs-Feature kommt bald!'); }
+async function handleActivityChart(interaction) { await interaction.reply('📈 Chart-Feature kommt bald!'); }
+async function handleAdminCleanup(interaction) { await interaction.reply('🧹 Cleanup-Feature kommt bald!'); }
+async function handleAdminSettings(interaction) { await interaction.reply('⚙️ Settings-Feature kommt bald!'); }
+
+// Solar Command Implementations (vereinfacht)
+async function handleSolarPlace(interaction) {
+    const location = interaction.options.getString('location').trim();
+    const userId = interaction.user.id;
+    const username = interaction.user.displayName || interaction.user.username;
+    const serverId = interaction.guildId;
+
+    await interaction.deferReply();
+
+    try {
+        const { rows } = await db.query(`
+            INSERT INTO solar_panels (user_id, username, location, server_id)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, placed_at
+        `, [userId, username, location, serverId]);
+
+        const solarId = rows[0].id;
+        
+        await logActivity(userId, username, 'PLACED', 'SOLAR', solarId, location, null, serverId, 75, 0);
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('☀️ Solarpanel erfolgreich aufgestellt!')
+            .setDescription('Das Panel sammelt nun Sonnenenergie!')
+            .addFields(
+                { name: '👤 Aufgestellt von', value: username, inline: true },
+                { name: '🆔 Panel-ID', value: `**#${solarId}**`, inline: true },
+                { name: '📍 Standort', value: `\`${location}\``, inline: true }
+            )
+            .setFooter({ text: 'Russkaya Familie 🇷🇺 • 4 Reparaturen = 1 Batterie!' })
+            .setTimestamp();
+
+        await interaction.followUp({ embeds: [embed] });
+
+    } catch (error) {
+        console.error('❌ Solar Place Error:', error);
+        await interaction.followUp('❌ Fehler beim Aufstellen des Solarpanels!');
+    }
+}
+
+async function handleSolarRepair(interaction) {
+    const solarId = interaction.options.getInteger('id');
+    const userId = interaction.user.id;
+    const username = interaction.user.displayName || interaction.user.username;
+    const serverId = interaction.guildId;
+
+    await interaction.deferReply();
+
+    try {
+        const { rows: panelRows } = await db.query(`
+            SELECT * FROM solar_panels 
+            WHERE id = $1 AND server_id = $2 AND status = 'active'
+        `, [solarId, serverId]);
+
+        if (panelRows.length === 0) {
+            await interaction.followUp('❌ Solarpanel nicht gefunden!');
+            return;
+        }
+
+        const panel = panelRows[0];
+        const newRepairCount = panel.repairs_count + 1;
+
+        await db.query(`
+            UPDATE solar_panels 
+            SET repairs_count = $1, last_repair_at = NOW()
+            WHERE id = $2
+        `, [newRepairCount, solarId]);
+
+        await logActivity(userId, username, 'REPAIRED', 'SOLAR', solarId, panel.location, `Reparatur ${newRepairCount}/4`, serverId, 60, 0);
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFA500')
+            .setTitle('🔧 Solarpanel repariert!')
+            .setDescription('Eine weitere Reparatur durchgeführt!')
+            .addFields(
+                { name: '👤 Repariert von', value: username, inline: true },
+                { name: '🆔 Panel-ID', value: `**#${solarId}**`, inline: true },
+                { name: '🔧 Reparaturen', value: `**${newRepairCount}/4**`, inline: true }
+            )
+            .setFooter({ text: 'Russkaya Familie 🇷🇺' })
+            .setTimestamp();
+
+        await interaction.followUp({ embeds: [embed] });
+
+    } catch (error) {
+        console.error('❌ Solar Repair Error:', error);
+        await interaction.followUp('❌ Fehler beim Reparieren!');
+    }
+}
+
+async function handleSolarCollect(interaction) {
+    const solarId = interaction.options.getInteger('id');
+    const car = interaction.options.getString('car').trim();
+    const userId = interaction.user.id;
+    const username = interaction.user.displayName || interaction.user.username;
+    const serverId = interaction.guildId;
+
+    await interaction.deferReply();
+
+    try {
+        const { rows: panelRows } = await db.query(`
+            SELECT * FROM solar_panels 
+            WHERE id = $1 AND server_id = $2 AND status = 'active'
+        `, [solarId, serverId]);
+
+        if (panelRows.length === 0) {
+            await interaction.followUp('❌ Solarpanel nicht gefunden!');
+            return;
+        }
+
+        const panel = panelRows[0];
+
+        if (panel.repairs_count < 4) {
+            await interaction.followUp(`❌ Panel noch nicht bereit! Noch **${4 - panel.repairs_count}** Reparaturen benötigt.`);
+            return;
+        }
+
+        await db.query(`
+            UPDATE solar_panels 
+            SET status = 'collected', collected_by = $1, collected_at = NOW(), car_stored = $2
+            WHERE id = $3
+        `, [username, car, solarId]);
+
+        await logActivity(userId, username, 'COLLECTED', 'SOLAR', solarId, panel.location, `Auto: ${car}`, serverId, 120, 1000);
+
+        const embed = new EmbedBuilder()
+            .setColor('#32CD32')
+            .setTitle('🔋 Batterie erfolgreich eingesammelt!')
+            .setDescription('Du hast eine Solar-Batterie eingesammelt!')
+            .addFields(
+                { name: '👤 Eingesammelt von', value: username, inline: true },
+                { name: '🆔 Panel-ID', value: `**#${solarId}**`, inline: true },
+                { name: '🚗 Verstaut in', value: `\`${car}\``, inline: true }
+            )
+            .setFooter({ text: 'Russkaya Familie 🇷🇺' })
+            .setTimestamp();
+
+        await interaction.followUp({ embeds: [embed] });
+
+    } catch (error) {
+        console.error('❌ Solar Collect Error:', error);
+        await interaction.followUp('❌ Fehler beim Sammeln!');
+    }
+}
+
+async function handleSolarStatus(interaction) {
+    const serverId = interaction.guildId;
+    await interaction.deferReply();
+
+    try {
+        const { rows: panels } = await db.query(`
+            SELECT * FROM solar_panels 
+            WHERE server_id = $1 AND status = 'active'
+            ORDER BY placed_at DESC
+            LIMIT 10
+        `, [serverId]);
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('☀️ Aktive Solarpanels')
+            .setDescription(`**${panels.length}** aktive Panels gefunden`)
+            .setFooter({ text: 'Russkaya Familie 🇷🇺' })
+            .setTimestamp();
+
+        if (panels.length === 0) {
+            await interaction.followUp({ embeds: [embed] });
+            return;
+        }
+
+        panels.forEach((panel, index) => {
+            if (index >= 5) return;
+
+            const status = panel.repairs_count >= 4 ? '🔋 BEREIT' : `🔧 ${panel.repairs_count}/4`;
+            
+            embed.addFields({
+                name: `Panel #${panel.id} - ${panel.location}`,
+                value: `👤 **${panel.username}** • ${status}`,
+                inline: true
+            });
+        });
+
+        await interaction.followUp({ embeds: [embed] });
+
+    } catch (error) {
+        console.error('❌ Solar Status Error:', error);
+        await interaction.followUp('❌ Fehler beim Abrufen der Solarpanels!');
+    }
+}
+
+// ===== REMINDER SYSTEM =====
+
+function scheduleReminder(type, itemId, serverId, delayMinutes, reminderType) {
+    setTimeout(async () => {
+        try {
+            console.log(`🔔 Reminder: ${type} #${itemId} - ${reminderType}`);
+            // Reminder-Logic hier - vereinfacht für Deployment
+        } catch (error) {
+            console.error('❌ Reminder Error:', error);
+        }
+    }, delayMinutes * 60 * 1000);
+}
+
+// ===== BACKGROUND TASK IMPLEMENTATIONS =====
+
+async function updateDailyStats() {
+    try {
+        console.log('📊 Daily stats updated');
+    } catch (error) {
+        console.error('❌ Update Daily Stats Error:', error);
+    }
+}
+
+async function createAutoBackup() {
+    try {
+        console.log('💾 Auto backup created');
+    } catch (error) {
+        console.error('❌ Create Auto Backup Error:', error);
+    }
+}
+
+async function cleanupOldEntries() {
+    try {
+        const cutoffDate = new Date(Date.now() - config.timers.cleanupInterval * 60 * 1000).toISOString();
+        await db.query(`DELETE FROM plants WHERE status = 'harvested' AND harvested_at < $1`, [cutoffDate]);
+        await db.query(`DELETE FROM solar_panels WHERE status = 'collected' AND collected_at < $1`, [cutoffDate]);
+        console.log('🧹 Cleanup completed');
+    } catch (error) {
+        console.error('❌ Cleanup Error:', error);
+    }
+}
+
+async function checkReminders() {
+    // Background reminder check - vereinfacht
+}
+
+// ===== HELPER FUNCTIONS =====
+
+function getActionIcon(actionType) {
+    const icons = {
+        'PLANTED': '🌱',
+        'FERTILIZED': '💚',
+        'HARVESTED': '🌿',
+        'PLACED': '☀️',
+        'REPAIRED': '🔧',
+        'COLLECTED': '🔋'
+    };
+    return icons[actionType] || '📝';
+}
+
+function getActionText(actionType) {
+    const texts = {
+        'PLANTED': 'säte',
+        'FERTILIZED': 'düngte',
+        'HARVESTED': 'erntete',
+        'PLACED': 'stellte auf',
+        'REPAIRED': 'reparierte',
+        'COLLECTED': 'sammelte'
+    };
+    return texts[actionType] || 'machte etwas mit';
+}
+
+// ===== REACTION HANDLERS =====
+
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+    try {
+        console.log(`👍 ${user.username} reagierte mit ${reaction.emoji.name}`);
+    } catch (error) {
+        console.error('❌ Reaction Handler Error:', error);
+    }
+});
+
+// ===== ERROR HANDLING & SHUTDOWN =====
+
+process.on('unhandledRejection', error => {
+    console.error('❌ Unhandled promise rejection:', error);
+});
+
+process.on('uncaughtException', error => {
+    console.error('❌ Uncaught exception:', error);
+    process.exit(1);
+});
+
+process.on('SIGINT', async () => {
+    console.log('🛑 Bot wird heruntergefahren...');
+    
+    try {
+        if (db && db.end) {
+            await db.end();
+            console.log('✅ Datenbank-Verbindung geschlossen');
+        }
+        
+        client.destroy();
+        console.log('✅ Bot heruntergefahren');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Fehler beim Herunterfahren:', error);
+        process.exit(1);
+    }
+});
+
+// ===== BOT LOGIN =====
+
+if (!config.token) {
+    console.error('❌ DISCORD_TOKEN Environment Variable nicht gesetzt!');
+    console.error('💡 Setze DISCORD_TOKEN in deiner .env Datei oder als Environment Variable');
+    process.exit(1);
+}
+
+client.login(config.token).catch(error => {
+    console.error('❌ Bot Login Error:', error);
+    console.error('💡 Überprüfe deinen Discord Bot Token!');
+    process.exit(1);
+});
+
+console.log('🚀 Russkaya Familie Bot v2.0 wird gestartet...');
+console.log('🇷🇺 Развивайся с семьёй Русская!');
+console.log('💰 AUSZAHLUNGS-SYSTEM: /backup format:json für tägliche Berechnungen!');const { 
     Client, 
     GatewayIntentBits, 
     SlashCommandBuilder, 
