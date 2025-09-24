@@ -24,8 +24,13 @@ WORKDIR /app
 # Package files kopieren für besseres Caching
 COPY package*.json ./
 
-# Dependencies installieren (nur Production)
-RUN npm ci --only=production && \
+# Dependencies installieren - FIXED für Railway
+# Nutze npm install statt npm ci falls keine package-lock.json vorhanden
+RUN if [ -f package-lock.json ]; then \
+        npm ci --omit=dev; \
+    else \
+        npm install --only=production; \
+    fi && \
     npm cache clean --force
 
 # Production Stage
