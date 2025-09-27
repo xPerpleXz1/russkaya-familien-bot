@@ -1,77 +1,79 @@
-# Multi-stage build für optimale Performance
-FROM node:18-alpine AS builder
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Metadata v3.0
-LABEL maintainer="Russkaya Familie"
-LABEL description="Discord Bot v3.0 - Vollständiges GTA RP Management System"
-LABEL version="3.0.0"
+# Environment Variables (KRITISCH!)
+.env
+.env.local
+.env.production
+.env.development
+.env.test
 
-# System dependencies für Charts und Native Modules
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    cairo-dev \
-    jpeg-dev \
-    pango-dev \
-    giflib-dev \
-    pixman-dev \
-    postgresql-client
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Arbeitsverzeichnis erstellen
-WORKDIR /app
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
 
-# Package files kopieren für besseres Caching
-COPY package*.json ./
+# Coverage directory used by tools like istanbul
+coverage/
 
-# Dependencies installieren
-RUN if [ -f package-lock.json ]; then \
-        npm ci --omit=dev; \
-    else \
-        npm install --only=production; \
-    fi && \
-    npm cache clean --force
+# nyc test coverage
+.nyc_output
 
-# Production Stage
-FROM node:18-alpine AS production
+# Datenbank-Dateien (lokal)
+*.db
+*.sqlite
+*.sqlite3
 
-# System runtime dependencies
-RUN apk add --no-cache \
-    cairo \
-    jpeg \
-    pango \
-    giflib \
-    pixman \
-    postgresql-client \
-    curl
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
 
-# Arbeitsverzeichnis
-WORKDIR /app
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Non-root user erstellen
-RUN addgroup -g 1001 -S botgroup && \
-    adduser -S botuser -u 1001 -G botgroup
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
 
-# Dependencies und Code kopieren
-COPY --from=builder --chown=botuser:botgroup /app/node_modules ./node_modules
-COPY --chown=botuser:botgroup . .
+# Railway deployment
+.railway/
 
-# Berechtigungen setzen
-RUN chown -R botuser:botgroup /app && \
-    chmod +x /app/scripts/*.js || true
+# Docker
+.dockerignore
 
-# Als non-root user wechseln
-USER botuser
+# Backup files
+backups/
+*.backup
+*.bak
 
-# Port für Health Checks
-EXPOSE 3000
+# Config files with secrets
+config.json
+secrets.json
 
-# Health Check v3.0
-HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
-
-# Graceful shutdown signal
-STOPSIGNAL SIGTERM
-
-# Bot starten v3.0
-CMD ["npm", "start"]
+# v3.0 specific
+data/
+exports/
+charts/
