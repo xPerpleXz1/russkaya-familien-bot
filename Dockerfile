@@ -1,10 +1,10 @@
 # Multi-stage build für optimale Performance
 FROM node:18-alpine AS builder
 
-# Metadata
+# Metadata v3.0
 LABEL maintainer="Russkaya Familie"
-LABEL description="Discord Bot v2.0 für GTA V Grand RP - Production Ready mit PostgreSQL"
-LABEL version="2.0.0"
+LABEL description="Discord Bot v3.0 - Vollständiges GTA RP Management System"
+LABEL version="3.0.0"
 
 # System dependencies für Charts und Native Modules
 RUN apk add --no-cache \
@@ -24,8 +24,7 @@ WORKDIR /app
 # Package files kopieren für besseres Caching
 COPY package*.json ./
 
-# Dependencies installieren - FIXED für Railway
-# Nutze npm install statt npm ci falls keine package-lock.json vorhanden
+# Dependencies installieren
 RUN if [ -f package-lock.json ]; then \
         npm ci --omit=dev; \
     else \
@@ -67,12 +66,12 @@ USER botuser
 # Port für Health Checks
 EXPOSE 3000
 
-# Health Check
+# Health Check v3.0
 HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # Graceful shutdown signal
 STOPSIGNAL SIGTERM
 
-# Bot starten
+# Bot starten v3.0
 CMD ["npm", "start"]
