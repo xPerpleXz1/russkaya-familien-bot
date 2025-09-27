@@ -1,7 +1,7 @@
 {
-  "name": "russkaya-familie-bot-v2",
-  "version": "2.0.0",
-  "description": "Production-ready Discord Bot für die Russkaya Familie - GTA V Grand RP DE1 Server mit PostgreSQL",
+  "name": "russkaya-familie-bot-v3",
+  "version": "3.0.0",
+  "description": "Vollständiges Discord Bot System für Russkaya Familie - GTA V Grand RP mit allen Aktivitäten",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -36,19 +36,23 @@
     "familie",
     "pflanzen",
     "solar",
+    "raids",
+    "events",
+    "recruitment",
     "farming",
     "postgresql",
     "railway",
-    "production-ready"
+    "production-ready",
+    "v3.0"
   ],
   "author": "Russkaya Familie",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/russkaya-familie/discord-bot-v2.git"
+    "url": "https://github.com/russkaya-familie/discord-bot-v3.git"
   },
   "bugs": {
-    "url": "https://github.com/russkaya-familie/discord-bot-v2/issues"
+    "url": "https://github.com/russkaya-familie/discord-bot-v3/issues"
   },
-  "homepage": "https://github.com/russkaya-familie/discord-bot-v2#readme"
+  "homepage": "https://github.com/russkaya-familie/discord-bot-v3#readme"
 }
