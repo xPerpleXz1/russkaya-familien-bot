@@ -1,199 +1,203 @@
-# 🇷🇺 Russkaya Familie Discord Bot v2.0
+# 🇷🇺 Russkaya Familie Discord Bot v3.0
 
-**Production-ready Discord Bot für GTA V Grand RP DE1 Server mit PostgreSQL auf Railway.**
+**Das ultimative Discord Bot System für GTA V Grand RP - Vollständige Aktivitäten-Verwaltung und Auszahlungssystem**
 
-![Discord Bot](https://img.shields.io/badge/Discord-Bot-7289da?style=for-the-badge&logo=discord&logoColor=white)
+![Discord Bot](https://img.shields.io/badge/Discord-Bot%20v3.0-7289da?style=for-the-badge&logo=discord&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-336791?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Railway](https://img.shields.io/badge/Railway-Deployment-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white)
 
-## ✨ Features
+## 🚀 NEU in v3.0 - Das komplette GTA RP System!
 
-### 🌱 **Pflanzen-System**
-- Säen, Düngen, Ernten mit präzisen Timern
-- Teamwork-Bonus für fremde Pflanzen (+25% XP)
-- Qualitätssystem und Ertragssteigerung
-- Automatische Erinnerungen
+### 🔫 **Vollständiges Raid & Event System**
+- **Raids:** 10.000€ pro Person automatisch erfasst
+- **Hafen Events:** 50.000€ pro wertvollem Container
+- **Mount Chiliad:** 30.000€ für We.Co.+Wüstenschal Container
+- **EKZ:** 100.000€ pro Person bei Gewinnen
+- **Shop Raub:** ~10.000€ pro Person (anpassbar)
+- **Flugzeugträger:** 20.000€ pro Drop-Aktivität
 
-### ☀️ **Solar-System** 
-- Panel aufstellen und verwalten
-- 4-Reparaturen-System für Batterien
-- Effizienz-System mit Bonus-Erträgen
-- Speed-Collection-Bonus
+### 🌾 **Externe Arbeiten System**
+- **Beete düngen:** 1.000€ pro gedüngtes Beet (extern)
+- **Solar reparieren:** 1.000€ pro Reparatur (extern)
+- **Pilzfarm:** 800€ pro Pilz-Abgabe
+- **Solar Batterie Abgabe:** 10.000€ pro abgegebene Batterie
 
-### 👤 **Profil & Level-System**
-- Erfahrungspunkte für alle Aktivitäten
-- Level-System mit Belohnungen
-- Persönliche Statistiken und Fortschritt
-- Leaderboards nach Kategorien
+### 👥 **Rekrutierungs-System**
+- **20.000€** pro erfolgreich rekrutierte Person
+- **1-Woche Tracking** für Aktivitäts-Nachweis
+- **Automatische Auszahlung** nach Bestätigung
 
-### 🏆 **Achievement-System**
-- 20+ verschiedene Achievements
-- 5 Seltenheitsstufen (Common bis Legendary)
-- Automatische Freischaltung
-- Belohnungen in XP und Geld
+### 💸 **Passive Einnahmen**
+- **Gelddruckmaschine:** 2.000€ alle 5 Minuten
+- **Automatisches Tracking** für passive Erträge
 
-### 📊 **Erweiterte Statistiken**
-- Server-Übersichten
-- Aktivitätsverlauf mit Diagrammen
-- Top-Standorte Analyse
-- Tägliche/wöchentliche Reports
+### 🍊 **Erweiterte Pflanzen (3 Typen)**
+- **🍊 Mandarinen:** 3h Wachstum, 800€ Ertrag (Standard)
+- **🍍 Ananas:** 5h Wachstum, 1.500€ Ertrag (Premium)
+- **🥬 Kohl:** 2h Wachstum, 500€ Ertrag (Schnell)
+- **Intelligente Timer:** Pausiert automatisch bei fehlender Düngung
 
-### 🔧 **Admin-Features**
-- Automatische Backups (täglich)
-- Datenbank-Cleanup
-- Server-Einstellungen
-- Logs und Monitoring
+### 🚗 **Gallivanter-Regel Integration**
+- **Automatische Erkennung** wenn Erträge in Gallivanter-Kofferaum gelegt werden
+- **Auszahlungs-Tracking** für alle qualifizierten Aktivitäten
+- **WICHTIG:** Batterie/Pilze/Beete NICHT selbst einsammeln!
 
-## 🚀 Railway Deployment (1-Click)
+## 📋 Vollständige Command-Liste
 
-### Voraussetzungen
-- [Railway Account](https://railway.app) (kostenlos)
-- Discord Bot Token
-- GitHub Repository
+### 🌱 **Farming Commands**
+| Command | Beschreibung |
+|---------|--------------|
+| `/pflanze-säen location: pflanzentyp:` | Neue Pflanze säen (3 Typen verfügbar) |
+| `/pflanze-düngen id:` | Pflanze düngen (pausiert Timer!) |
+| `/pflanze-ernten id: car:` | Pflanze ernten (Gallivanter für Auszahlung!) |
+| `/pflanzen-status [filter:]` | Aktive Pflanzen anzeigen |
+| `/pflanzen-info` | Alle Pflanzentypen & Details |
 
-### Schritt-für-Schritt Anleitung
+### ☀️ **Solar Commands**
+| Command | Beschreibung |
+|---------|--------------|
+| `/solar-aufstellen location:` | Solarpanel aufstellen |
+| `/solar-reparieren id:` | Panel reparieren (pausiert Timer!) |
+| `/solar-sammeln id: car:` | Batterie sammeln (Gallivanter!) |
+| `/solar-status` | Aktive Panels anzeigen |
 
-#### 1. Repository Setup
-```bash
-# Repository forken oder clonen
-git clone https://github.com/russkaya-familie/discord-bot-v2.git
-cd discord-bot-v2
+### 🔫 **Event & Raid Commands (NEU!)**
+| Command | Beschreibung |
+|---------|--------------|
+| `/aktivität-eintragen typ: location: teilnehmer:` | Raids/Events registrieren |
+| `/externe-arbeit typ: location: anzahl:` | Beete/Solar extern |
+| `/aktivitäten-info` | Alle Aktivitäten & Auszahlungsraten |
 
-# Oder eigenes Repository erstellen
+### 👥 **Rekrutierung Commands (NEU!)**
+| Command | Beschreibung |
+|---------|--------------|
+| `/rekrutierung neuer_spieler: [discord_user:]` | Rekrutierung starten |
+| `/rekrutierung-abschließen id:` | Nach 1 Woche abschließen (20.000€) |
+
+### 📊 **Statistiken & Info**
+| Command | Beschreibung |
+|---------|--------------|
+| `/meine-aktivitäten [zeitraum:]` | Persönliche Übersicht |
+| `/statistiken` | Umfassende Server-Statistiken |
+| `/help` | Vollständige Hilfe v3.0 |
+
+### 💾 **Admin Commands** (Admin only)
+| Command | Beschreibung |
+|---------|--------------|
+| `/backup format:json` | **VOLLSTÄNDIGE AUSZAHLUNGEN** |
+| `/backup format:csv` | Standard Daten-Backup |
+| `/backup format:complete` | Alle Tabellen (v3.0) |
+
+## 💰 Vollständige Auszahlungsraten
+
+### 🔫 **Raids & Events**
+```
+🔫 Raid: 10.000€ pro Person
+🚢 Hafen Event: 50.000€ pro Container
+⛰️ Mount Chiliad: 30.000€ pro Abgabe
+🏬 EKZ: 100.000€ pro Person
+🏪 Shop Raub: ~10.000€ pro Person
+✈️ Flugzeugträger: 20.000€ pro Drop
 ```
 
-#### 2. Discord Bot erstellen
-1. Gehe zu [Discord Developer Portal](https://discord.com/developers/applications)
-2. "New Application" → Namen eingeben
-3. Links: "Bot" → "Add Bot"
-4. Token kopieren (für später)
-5. Bot Permissions:
-   - Send Messages
-   - Use Slash Commands  
-   - Embed Links
-   - Attach Files
-   - Read Message History
-   - Add Reactions
+### 🌾 **Farming & Externe Arbeiten**
+```
+🌱 Beete düngen: 1.000€ pro Beet
+🔧 Solar reparieren: 1.000€ pro Reparatur
+🔋 Solar Abgabe: 10.000€ pro Batterie
+🍄 Pilzfarm: 800€ pro Abgabe
+```
 
-#### 3. Railway Deployment
-1. **Railway Account erstellen**
-   - Gehe zu [railway.app](https://railway.app)
-   - Registriere dich mit GitHub
+### 🍊 **Pflanzen-System (Neue Typen)**
+```
+🍊 Mandarinen (3h): 800€ Ertrag, 400€ Säen-Rate
+🍍 Ananas (5h): 1.500€ Ertrag, 600€ Säen-Rate
+🥬 Kohl (2h): 500€ Ertrag, 300€ Säen-Rate
+💚 Dünger-Bonus: +25% auf alle Pflanzen
+```
 
-2. **Neues Projekt**
-   - "New Project" → "Deploy from GitHub repo"
-   - Wähle dein Repository
+### 💸 **Passive & Sonstige**
+```
+💸 Gelddruckmaschine: 2.000€ alle 5 Min
+👥 Rekrutierung: 20.000€ pro Person (1+ Woche)
+```
 
-3. **PostgreSQL hinzufügen**
-   - Im Dashboard: "New" → "Database" → "PostgreSQL"
-   - `DATABASE_URL` wird automatisch gesetzt
+## 🚀 Railway Deployment (v3.0)
 
-4. **Environment Variables setzen**
-   ```
-   DISCORD_TOKEN=dein_bot_token_hier
+### Quick Setup:
+1. **Repository:** [Fork/Clone v3.0 Branch]
+2. **Railway:** Neues Projekt von GitHub repo
+3. **PostgreSQL:** Automatisch hinzufügen
+4. **Environment Variables:**
+   ```env
+   DISCORD_TOKEN=dein_token_hier
    PLANT_CHANNEL_ID=123456789012345678
    SOLAR_CHANNEL_ID=123456789012345678
    BACKUP_CHANNEL_ID=123456789012345678
+   LOGS_CHANNEL_ID=123456789012345678
    ```
+5. **Deploy:** Automatisch bei Git Push
 
-5. **Deployment**
-   - Automatisch bei Git Push
-   - URL: `https://your-app-name.up.railway.app`
+### Migration von v2.0:
+- ✅ **Keine Breaking Changes**
+- ✅ **Automatische Datenbank-Migration**
+- ✅ **Alle bestehenden Daten bleiben erhalten**
+- ✅ **Zero-Downtime Update möglich**
 
-#### 4. Channel IDs finden
-1. Discord → Einstellungen → Erweitert → Entwicklermodus ✅
-2. Rechtsklick auf Channel → "ID kopieren"
-3. In Railway Environment Variables einfügen
-
-#### 5. Bot einladen
-1. Discord Developer Portal → OAuth2 → URL Generator
-2. Scopes: `bot` + `applications.commands`
-3. URL öffnen → Bot zu Server einladen
-
-**🎉 Fertig! Der Bot ist jetzt online und funktionsbereit.**
-
-## 📋 Commands Übersicht
-
-### 🌱 Pflanzen
-| Command | Beschreibung |
-|---------|--------------|
-| `/pflanze-säen location:[Ort]` | Neue Pflanze säen |
-| `/pflanze-düngen id:[ID]` | Pflanze düngen (+25% Ertrag) |
-| `/pflanze-ernten id:[ID] car:[Auto]` | Pflanze ernten |
-| `/pflanzen-status [filter]` | Aktive Pflanzen anzeigen |
-
-### ☀️ Solar
-| Command | Beschreibung |
-|---------|--------------|
-| `/solar-aufstellen location:[Ort]` | Solarpanel aufstellen |
-| `/solar-reparieren id:[ID]` | Panel reparieren |
-| `/solar-sammeln id:[ID] car:[Auto]` | Batterie sammeln |
-| `/solar-status [filter]` | Aktive Panels anzeigen |
-
-### 👤 Profil & Stats
-| Command | Beschreibung |
-|---------|--------------|
-| `/profil [user]` | Profil anzeigen |
-| `/leaderboard [kategorie]` | Bestenliste |
-| `/achievements [user]` | Errungenschaften |
-| `/statistiken [typ]` | Server-Statistiken |
-
-### 🔧 Utility
-| Command | Beschreibung |
-|---------|--------------|
-| `/logs [anzahl] [typ]` | Aktivitätslogs |
-| `/verlauf [zeitraum]` | Aktivitätsdiagramm |
-| `/help [kategorie]` | Hilfe anzeigen |
-
-### 👑 Admin (Nur Administratoren)
-| Command | Beschreibung |
-|---------|--------------|
-| `/backup [format]` | Daten-Backup erstellen |
-| `/admin-cleanup [tage]` | Alte Einträge bereinigen |
-| `/admin-settings [setting]` | Server-Einstellungen |
-
-## ⏰ Timer & Mechaniken
-
-### 🌱 Pflanzen-System
-- **Wachstumszeit:** 4 Stunden (240 Min)
-- **Dünger-Erinnerungen:** Nach 35 Min & 55 Min
-- **Ertragssteigerung:** +25% mit Dünger
-- **Teamwork-Bonus:** +25 XP für fremde Pflanzen
-
-### ☀️ Solar-System
-- **Batterie-Zeit:** 2 Stunden (120 Min)
-- **Reparatur-Erinnerungen:** Nach 30 Min & 50 Min
-- **System:** 4 Reparaturen = 1 Batterie
-- **Effizienz-Bonus:** +20% pro Reparatur
-
-### ⭐ Erfahrungssystem
-| Aktivität | XP (eigen) | XP (fremd) |
-|-----------|------------|------------|
-| Pflanze säen | 50 | - |
-| Pflanze düngen | 30 | 50 |
-| Pflanze ernten | 100 | 75 |
-| Solar aufstellen | 75 | - |
-| Solar reparieren | 40 | 60 |
-| Batterie sammeln | 120 | 90 |
-
-## 🛠️ Tech Stack
+## 🔧 Tech Stack v3.0
 
 - **Runtime:** Node.js 18+
-- **Database:** PostgreSQL (Railway)
+- **Database:** PostgreSQL (5 Tabellen)
 - **Discord API:** discord.js v14
-- **Charts:** ChartJS-Node-Canvas
-- **Scheduling:** node-cron
-- **Health Checks:** Express
-- **Deployment:** Railway
-- **Container:** Docker (optional)
+- **Background Jobs:** node-cron (Timer-Management)
+- **Health Monitoring:** Express + erweiterte Checks
+- **Deployment:** Railway (Auto-Scaling)
+- **Fallbacks:** SQLite + Memory-Storage
+
+## 📊 Neue Datenbank-Struktur
+
+### Tabellen (v3.0):
+1. **plants** - Erweitert mit plant_type, timer_paused_at
+2. **solar_panels** - Erweitert mit timer_paused_at  
+3. **activity_logs** - Erweitert mit plant_type, reward, activity_category
+4. **general_activities** - NEU: Raids, Events, etc.
+5. **external_work** - NEU: Externe Beete/Solar Arbeiten
+6. **recruitments** - NEU: Rekrutierungs-Tracking
+
+## ⚠️ WICHTIGE GALLIVANTER-REGEL
+
+```
+🚗 FÜR AUSZAHLUNGEN:
+Batterie/Pilze/Beete NICHT selbst einsammeln!
+➡️ In GALLIVANTER-KOFFERAUM legen!
+
+Commands nutzen:
+• /aktivität-eintragen für Events
+• /externe-arbeit für Beete/Solar
+• /solar-sammeln car:gallivanter
+• /pflanze-ernten car:gallivanter
+```
+
+## 🏆 Features & Highlights
+
+- ✅ **100% Rückwärtskompatibel** mit v2.0
+- ✅ **Vollständiges Auszahlungssystem** für alle GTA RP Aktivitäten
+- ✅ **Smart Timer-Mechanik** pausiert bei Inaktivität
+- ✅ **3 Pflanzentypen** mit strategischen Unterschieden
+- ✅ **Gallivanter-Integration** für automatische Auszahlungserkennung
+- ✅ **Rekrutierungs-Belohnungen** für Familienwachstum
+- ✅ **Umfassende Statistiken** und Analytics
+- ✅ **Production-Ready** mit Health Monitoring
+- ✅ **Auto-Scaling** auf Railway
+- ✅ **Zero-Config** Deployment
 
 ## 🔧 Lokale Entwicklung
 
 ```bash
 # Repository clonen
-git clone https://github.com/russkaya-familie/discord-bot-v2.git
-cd discord-bot-v2
+git clone https://github.com/dein-username/russkaya-bot-v3.git
+cd russkaya-bot-v3
 
 # Dependencies installieren
 npm install
@@ -229,68 +233,19 @@ Der Bot verwendet automatisch SQLite als Fallback wenn keine PostgreSQL `DATABAS
 - **Database Logs:** Activity_logs Tabelle
 - **Error Handling:** Graceful Error Recovery
 
-## 🏆 Achievement-System
+## 📞 Support & Updates
 
-### Seltenheitsstufen
-- **🌟 Legendary:** Ultimative Herausforderungen
-- **🔥 Epic:** Sehr schwere Ziele
-- **💜 Rare:** Schwierige Aufgaben
-- **💙 Uncommon:** Mittlere Herausforderungen
-- **⚪ Common:** Einfache Ziele
-
-### Beispiel Achievements
-- **Erster Schritt** (Common): Erste Pflanze säen
-- **Meister-Gärtner** (Rare): 50 Pflanzen säen
-- **Team-Player** (Uncommon): 5 fremde Pflanzen düngen
-- **Legende** (Legendary): Level 30 erreichen
-
-## 🔐 Sicherheit & Best Practices
-
-- ✅ **Environment Variables** für alle Secrets
-- ✅ **Input Validation** bei allen Commands
-- ✅ **Rate Limiting** durch Discord API
-- ✅ **Non-root Container** Ausführung
-- ✅ **SQL Injection** Schutz mit Parameterized Queries
-- ✅ **Error Handling** mit Graceful Degradation
-
-## 🌍 Skalierung & Performance
-
-- **Horizontal Scaling:** Stateless Design
-- **Database:** PostgreSQL Connection Pooling
-- **Memory:** Automatische Garbage Collection
-- **Background Tasks:** Cron-Jobs für Maintenance
-- **Railway:** Auto-Scaling Support
-
-## 📞 Support & Community
-
-- **🐛 Bug Reports:** [GitHub Issues](https://github.com/russkaya-familie/discord-bot-v2/issues)
-- **💡 Feature Requests:** [GitHub Discussions](https://github.com/russkaya-familie/discord-bot-v2/discussions)
-- **📚 Wiki:** [Dokumentation](https://github.com/russkaya-familie/discord-bot-v2/wiki)
-- **💬 Discord:** [Community Server](#)
-
-## 📝 Changelog
-
-### v2.0.0 (Latest)
-- ✅ PostgreSQL Support
-- ✅ Railway-Ready Deployment
-- ✅ Achievement-System
-- ✅ Level & XP System
-- ✅ Advanced Statistics
-- ✅ Automated Backups
-- ✅ Health Monitoring
-- ✅ 20+ New Commands
-
-### v1.0.0
-- 🌱 Basic Plant System
-- ☀️ Basic Solar System
-- 📊 SQLite Database
+- **🐛 Bug Reports:** [GitHub Issues](https://github.com/dein-username/discord-bot-v3/issues)
+- **💡 Feature Requests:** [GitHub Discussions](https://github.com/dein-username/discord-bot-v3/discussions)
+- **📚 Documentation:** [Wiki v3.0](https://github.com/dein-username/discord-bot-v3/wiki)
+- **💬 Discord:** [Community Server](https://discord.gg/russkaya)
 
 ## 📜 License
 
-MIT License - siehe [LICENSE](LICENSE) file.
+MIT License - Open Source für die Community
 
 ---
 
 **Развивайся с семьёй Русская! 🇷🇺**
 
-*Made with ❤️ for the GrandRP Community*
+*v3.0 - Das ultimative GTA RP Familie Management System*
