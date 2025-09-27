@@ -72,3 +72,8 @@ backups/
 # Config files with secrets
 config.json
 secrets.json
+
+# v3.0 specific
+data/
+exports/
+charts/
