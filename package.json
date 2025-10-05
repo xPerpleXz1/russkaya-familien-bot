@@ -1,20 +1,16 @@
 {
-  "name": "russkaya-familie-bot-v3",
-  "version": "3.0.0",
-  "description": "Vollständiges Discord Bot System für Russkaya Familie - GTA V Grand RP mit allen Aktivitäten",
+  "name": "russkaya-familie-bot",
+  "version": "3.0.2",
+  "description": "Discord Bot für Russkaya Familie - GTA V Grand RP mit Pflanzen-System",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "node test.js",
-    "migrate": "node scripts/migrate.js",
-    "backup": "node scripts/backup.js",
-    "setup": "node scripts/setup.js"
+    "test": "node test.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
     "pg": "^8.11.3",
-    "chartjs-node-canvas": "^4.1.6",
     "express": "^4.18.2",
     "dotenv": "^16.3.1",
     "node-cron": "^3.0.3",
@@ -33,26 +29,11 @@
     "gta",
     "grand-rp",
     "russkaya",
-    "familie",
     "pflanzen",
     "solar",
-    "raids",
-    "events",
-    "recruitment",
-    "farming",
     "postgresql",
-    "railway",
-    "production-ready",
-    "v3.0"
+    "railway"
   ],
   "author": "Russkaya Familie",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/russkaya-familie/discord-bot-v3.git"
-  },
-  "bugs": {
-    "url": "https://github.com/russkaya-familie/discord-bot-v3/issues"
-  },
-  "homepage": "https://github.com/russkaya-familie/discord-bot-v3#readme"
+  "license": "MIT"
 }
